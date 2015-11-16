@@ -30,6 +30,8 @@ private:
     bool ParseCallArguments(std::vector<CCxxExpr> &args);
     CCxxExpr ParseExpr();
     CCxxExpr ParseBinaryExpr(size_t priority);
+    CCxxExpr ParseCallExpr();
+    CCxxExpr ParseNewExpr();
     CCxxExpr ParseAtom();
     void RecoverToNextStmt();
     bool ConsumeSequenceOrFail(const std::vector<std::pair<Token, Error>> &sequence);

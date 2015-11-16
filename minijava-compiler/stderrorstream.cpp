@@ -19,8 +19,10 @@ CStderrErrorStream::CStderrErrorStream()
         {Error::MissingExtends, "missed 'extends' keyword"},
         {Error::MissingSemicolon, "missing ';'"},
         {Error::MissingExpression, "missing expression"},
+        {Error::MissingIdentifier, "missing identifier"},
         {Error::MissingClassName, "missing class name"},
         {Error::InvalidStatement, "unknown statement"},
+        {Error::MissingCloseBracket, "missing ']'"}
     };
 }
 

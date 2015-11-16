@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace minijava
 {
@@ -23,6 +24,8 @@ public:
     void EmitLessThan(CCxxExpr const& exprRight);
     void EmitGetElement(CCxxExpr const& exprIndex);
     void EmitGetLength();
+    void EmitCallMethod(SToken const& methodId, std::vector<CCxxExpr> const& args);
+    void EmitNewExpr();
 
     std::string const& GetCode() const;
     bool IsEmpty() const;

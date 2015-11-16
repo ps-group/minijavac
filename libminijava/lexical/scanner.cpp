@@ -24,6 +24,7 @@ CScanner::CScanner(CBaseScannerStream &stream, IErrorStream &errorStream)
         {'*', Token::OperatorMul},
         {'-', Token::OperatorSub},
         {'<', Token::OperatorLess},
+        {'.', Token::Dot},
     };
     m_keywords = {
         {"class", Token::KeywordClass},

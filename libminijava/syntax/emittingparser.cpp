@@ -20,17 +20,20 @@ std::string MAIN_FUNC_PREFIX = R"**(
 int main()
 )**";
 
+static const char EXCEPTION_NAME[] = "source code parsing error";
+static const char PROPERTY_LENGTH[] = "length";
+
 class ParseException : public std::runtime_error
 {
 public:
     ParseException(Error error)
-        : std::runtime_error("compile error with current token")
+        : std::runtime_error(EXCEPTION_NAME)
         , m_error(error)
     {
     }
 
     ParseException(SToken const& token, Error error)
-        : std::runtime_error("compile error with custom token")
+        : std::runtime_error(EXCEPTION_NAME)
         , m_token(token)
         , m_error(error)
     {
@@ -166,8 +169,8 @@ bool CEmittingParser::ParseVarDeclStatement(CCxxBodyBuilder &stmt)
             m_context.Consume(2);
             found = true;
         }
-        else if (m_context.LookAhead(1) == Token::OpenBrace
-                 && m_context.LookAhead(2) == Token::CloseBrace
+        else if (m_context.LookAhead(1) == Token::OpenBracket
+                 && m_context.LookAhead(2) == Token::CloseBracket
                  && m_context.LookAhead(3) == Token::Id)
         {
             stmt.AddArrayDecl(m_context.GetAhead(0), m_context.GetAhead(3));
@@ -317,7 +320,7 @@ CCxxExpr CEmittingParser::ParseBinaryExpr(size_t priority)
 {
     if (priority >= m_operatorGroups.size())
     {
-        return ParseAtom();
+        return ParseCallExpr();
     }
 
     CCxxExpr expr{ ParseBinaryExpr(priority + 1) };
@@ -345,6 +348,82 @@ CCxxExpr CEmittingParser::ParseBinaryExpr(size_t priority)
     }
 
     return expr;
+}
+
+CCxxExpr CEmittingParser::ParseCallExpr()
+{
+    CCxxExpr object{ ParseNewExpr() };
+    if (object.IsEmpty())
+    {
+        return object;
+    }
+
+    switch (m_context.LookAhead(0))
+    {
+    case Token::Dot:
+    {
+        m_context.Consume(1);
+        SToken id = m_context.GetAhead(0);
+        if (id.token != Token::Id)
+        {
+            throw ParseException(Error::MissingIdentifier);
+        }
+        m_context.Consume(1);
+        if (m_context.LookAhead(0) == Token::OpenParen)
+        {
+            std::vector<CCxxExpr> args;
+            if (!ParseCallArguments(args))
+            {
+                throw ParseException(Error::MissingArgumentsList);
+            }
+            object.EmitCallMethod(id, args);
+        }
+        else if (id.value == PROPERTY_LENGTH)
+        {
+            object.EmitGetLength();
+        }
+        else
+        {
+            throw ParseException(Error::MissingArgumentsList);
+        }
+        break;
+    }
+    case Token::OpenBracket:
+    {
+        m_context.Consume(1);
+        CCxxExpr index{ ParseExpr() };
+        if (m_context.LookAhead(0) != Token::CloseBracket)
+        {
+            throw ParseException(m_context.GetAhead(0), Error::UnexpectedBinOp);
+        }
+        object.EmitGetElement(index);
+        break;
+    }
+    default:
+        break;
+    }
+    return object;
+}
+
+CCxxExpr CEmittingParser::ParseNewExpr()
+{
+    if (m_context.LookAhead(0) == Token::KeywordNew)
+    {
+        m_context.Consume(1);
+        CCxxExpr expr{ ParseAtom() };
+        expr.EmitNewExpr();
+        if (m_context.LookAhead(0) == Token::OpenParen)
+        {
+            if (m_context.LookAhead(1) != Token::CloseParen)
+            {
+                throw ParseException(Error::MissingCloseParen);
+            }
+            m_context.Consume(2);
+        }
+        return expr;
+    }
+
+    return ParseAtom();
 }
 
 CCxxExpr CEmittingParser::ParseAtom()

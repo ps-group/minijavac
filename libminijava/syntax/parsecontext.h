@@ -17,7 +17,6 @@ public:
     void Consume(size_t amount);
     void ExtendLAStack(size_t newSize);
 
-
     inline void EmitError(SToken const& token, Error code)
     {
         m_errorStream.EmitError(token, code);

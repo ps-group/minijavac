@@ -26,16 +26,42 @@ public:
     void AddPrintln(const std::vector<CCxxExpr> &printable);
     void AddReturn(CCxxExpr const& expr);
     void AddReturnVoid();
-    void AddWhileLoop(CCxxExpr const& condition, CCxxBodyBuilder const& body);
-    void AddIfElseBranch(CCxxExpr const& condition, CCxxBodyBuilder const& bodyYes, CCxxBodyBuilder const& bodyNo);
+    void EnterWhileLoop(CCxxExpr const& condition);
+    void EnterIfBranch(CCxxExpr const& condition);
+    void EnterElseBranch(CCxxExpr const& condition);
 
     std::string GetCode() const;
 
 private:
+    // endian is ';', '{' or '}'
+    template <char endian, typename ...TArgs>
+    void AppendLine(TArgs... args)
+    {
+        for (int i = 0, n = m_indent; i < n; ++i)
+        {
+            m_code << '\t';
+        }
+        DoNothing(PrintArg(args)...);
+        m_code << endian << std::endl;
+    }
+
+    template <typename ...TArgs>
+    void DoNothing(TArgs...)
+    {
+    }
+
+    template <typename T>
+    T const& PrintArg(T const& arg)
+    {
+        m_code << arg;
+        return arg;
+    }
+
     std::string const& TransformType(std::string const& value);
 
     std::map<std::string, std::string> m_typeTransform;
     std::stringstream m_code;
+    int m_indent = 0;
 };
 
 }

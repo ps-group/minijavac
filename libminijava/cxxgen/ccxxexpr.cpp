@@ -92,6 +92,26 @@ void CCxxExpr::EmitGetLength()
     m_code = boost::str(formatter);
 }
 
+void CCxxExpr::EmitCallMethod(const SToken &methodId, const std::vector<CCxxExpr> &args)
+{
+    std::string argsString = "(";
+    for (int i = 0, n = args.size(); i < n; ++i)
+    {
+        argsString += (i == n) ? ')' : ',';
+        argsString += args[i].GetCode();
+    }
+    boost::format formatter("(%1%.%2%%3%)");
+    formatter % m_code % methodId.value % argsString;
+    m_code = boost::str(formatter);
+}
+
+void CCxxExpr::EmitNewExpr()
+{
+    boost::format formatter("(new %1%())");
+    formatter % m_code;
+    m_code = boost::str(formatter);
+}
+
 const std::string &CCxxExpr::GetCode() const
 {
     return m_code;

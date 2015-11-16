@@ -23,6 +23,8 @@ enum class Error
     MissingArgumentsList,
     MissingSemicolon,
     MissingExpression,
+    MissingIdentifier,
+    MissingCloseBracket,
     InvalidStatement,
 };
 

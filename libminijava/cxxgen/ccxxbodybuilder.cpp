@@ -5,6 +5,8 @@
 namespace minijava
 {
 
+static const char ERROR_INDENT_MISMATCH[] = "code generation error: CCxxBodyBuilder exits scope but never entered";
+
 CCxxBodyBuilder::CCxxBodyBuilder()
 {
     m_typeTransform = {
@@ -14,12 +16,18 @@ CCxxBodyBuilder::CCxxBodyBuilder()
 
 void CCxxBodyBuilder::EnterScope()
 {
-    m_code << "{\n";
+    AppendLine<'{'>();
+    ++m_indent;
 }
 
 void CCxxBodyBuilder::ExitScope()
 {
-    m_code << "}\n";
+    if (m_indent <= 0)
+    {
+        throw std::runtime_error(ERROR_INDENT_MISMATCH);
+    }
+    --m_indent;
+    AppendLine<'}'>();
 }
 
 void CCxxBodyBuilder::AddVariableDecl(const SToken &type, const SToken &name)
@@ -28,10 +36,10 @@ void CCxxBodyBuilder::AddVariableDecl(const SToken &type, const SToken &name)
     {
     case Token::KeywordInt:
     case Token::KeywordBoolean:
-        m_code << "int " + name.value + ";\n";
+        AppendLine<';'>("int " + name.value);
         break;
     case Token::Id:
-        m_code << TransformType(type.value) + " " + name.value + ";\n";
+        AppendLine<';'>(TransformType(type.value) + " " + name.value);
         break;
     default:
         throw std::logic_error("CCxxStmt cannot add variable with type '" + type.value + "'");
@@ -44,10 +52,10 @@ void CCxxBodyBuilder::AddArrayDecl(const SToken &type, const SToken &name)
     {
     case Token::KeywordInt:
     case Token::KeywordBoolean:
-        m_code << "std::vector<int> " + name.value + ";\n";
+        AppendLine<';'>("std::vector<int> " + name.value);
         break;
     case Token::Id:
-        m_code << "std::vector<" + TransformType(type.value) + "> " + name.value + ";\n";
+        AppendLine<';'>("std::vector<" + TransformType(type.value) + "> " + name.value);
         break;
     default:
         throw std::logic_error("CCxxStmt cannot add variable with type '" + type.value + "'");
@@ -56,47 +64,48 @@ void CCxxBodyBuilder::AddArrayDecl(const SToken &type, const SToken &name)
 
 void CCxxBodyBuilder::AddAssign(const SToken &name, const CCxxExpr &value)
 {
-    m_code << name.value + " = " + value.GetCode() + ";\n";
+    AppendLine<';'>(name.value + " = " + value.GetCode());
 }
 
 void CCxxBodyBuilder::AddElementAssign(const SToken &name, const CCxxExpr &index, const CCxxExpr &value)
 {
-    m_code << name.value + "[" + index.GetCode() + "] = " + value.GetCode() + ";\n";
+    AppendLine<';'>(name.value + "[" + index.GetCode() + "] = " + value.GetCode());
 }
 
 void CCxxBodyBuilder::AddPrintln(const std::vector<CCxxExpr> &printable)
 {
     for (auto const& expr : printable)
     {
-        m_code << "std::cout << " << expr.GetCode() << ";\n";
-        m_code << "std::cout << std::endl;\n";
+        AppendLine<';'>("std::cout << " + expr.GetCode() + " << std::endl");
     }
 }
 
 void CCxxBodyBuilder::AddReturn(const CCxxExpr &expr)
 {
-    m_code << "return " << expr.GetCode() << ";\n";
+    AppendLine<';'>("return " + expr.GetCode());
 }
 
 void CCxxBodyBuilder::AddReturnVoid()
 {
-    m_code << "return;\n";
+    AppendLine<';'>("return");
 }
 
-void CCxxBodyBuilder::AddWhileLoop(const CCxxExpr &condition, const CCxxBodyBuilder &body)
+void CCxxBodyBuilder::EnterWhileLoop(const CCxxExpr &condition)
 {
-    m_code << "while (" << condition.GetCode() << ")\n"
-           << body.GetCode()
-           << "\n";
+    AppendLine<'{'>("while (" + condition.GetCode() + ")");
+    ++m_indent;
 }
 
-void CCxxBodyBuilder::AddIfElseBranch(const CCxxExpr &condition, const CCxxBodyBuilder &bodyYes, const CCxxBodyBuilder &bodyNo)
+void CCxxBodyBuilder::EnterIfBranch(const CCxxExpr &condition)
 {
-    m_code << "if (" << condition.GetCode() << ")\n"
-           << bodyYes.GetCode()
-           << "else\n"
-           << bodyNo.GetCode()
-           << "\n";
+    AppendLine<'{'>("if (" + condition.GetCode() + ")");
+    ++m_indent;
+}
+
+void CCxxBodyBuilder::EnterElseBranch(const CCxxExpr &condition)
+{
+    AppendLine<'{'>("else (" + condition.GetCode() + ")");
+    ++m_indent;
 }
 
 std::string CCxxBodyBuilder::GetCode() const
